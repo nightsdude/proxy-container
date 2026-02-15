@@ -1,2 +1,19 @@
-# WireGuard Personal Proxy
-# Built in subsequent tasks
+services:
+  wireguard:
+    build: .
+    container_name: wireguard
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - "${SERVER_PORT:-51820}:${SERVER_PORT:-51820}/udp"
+    volumes:
+      - ./config:/config
+    env_file:
+      - .env
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+    restart: unless-stopped
