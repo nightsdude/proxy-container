@@ -37,7 +37,8 @@ EXPOSE 51820/udp
 COPY rootfs/ /
 
 # Make scripts executable
-RUN chmod +x /usr/local/bin/wg-init /usr/local/bin/duckdns-update /usr/local/bin/add-peer && \
+RUN chmod +x /usr/local/bin/wg-init /usr/local/bin/duckdns-update \
+              /usr/local/bin/add-peer /usr/local/bin/remove-peer && \
     find /etc/s6-overlay/s6-rc.d -name "run" -o -name "finish" -o -name "up" | xargs chmod +x
 
 ENTRYPOINT ["/init"]

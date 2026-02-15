@@ -1,0 +1,46 @@
+#!/bin/bash
+set -euo pipefail
+
+PEER_NAME="${1:-}"
+
+if [ -z "${PEER_NAME}" ]; then
+    echo "Usage: remove-peer <name>"
+    exit 1
+fi
+
+CONFIG_DIR="/config"
+WG_CONF="${CONFIG_DIR}/wg/wg0.conf"
+PEER_DIR="${CONFIG_DIR}/peers/${PEER_NAME}"
+
+# Check if peer exists
+if [ ! -d "${PEER_DIR}" ]; then
+    echo "Error: peer '${PEER_NAME}' not found"
+    exit 1
+fi
+
+# Read peer public key
+PEER_PUBLIC_KEY=$(cat "${PEER_DIR}/public.key")
+
+# Remove peer from running WireGuard if active
+if ip link show wg0 > /dev/null 2>&1; then
+    wg set wg0 peer "${PEER_PUBLIC_KEY}" remove
+    echo "[remove-peer] Peer removed from running WireGuard interface"
+fi
+
+# Remove peer section from server config
+# Uses awk to remove the "# Peer: name" comment, the [Peer] block, and all
+# lines until the next section or EOF
+awk -v name="${PEER_NAME}" '
+    /^# Peer: / && $3 == name { skip=1; next }
+    /^\[Peer\]/ && skip { next }
+    /^$/ && skip { next }
+    /^(\[|# Peer:)/ && skip { skip=0 }
+    !skip { print }
+' "${WG_CONF}" > "${WG_CONF}.tmp"
+mv "${WG_CONF}.tmp" "${WG_CONF}"
+
+# Remove peer directory
+rm -rf "${PEER_DIR}"
+
+echo ""
+echo "Peer '${PEER_NAME}' removed successfully."
