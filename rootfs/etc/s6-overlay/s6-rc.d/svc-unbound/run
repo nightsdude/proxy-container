@@ -1,0 +1,7 @@
+#!/command/with-contenv bash
+set -euo pipefail
+
+echo "[unbound] Starting Unbound DNS resolver on 10.13.13.1:53"
+
+# Run in foreground (-d)
+exec unbound -d -c /etc/unbound/unbound.conf
