@@ -33,4 +33,10 @@ VOLUME /config
 # WireGuard port
 EXPOSE 51820/udp
 
+# Copy rootfs overlay
+COPY rootfs/ /
+
+# Make scripts executable
+RUN chmod +x /usr/local/bin/wg-init
+
 ENTRYPOINT ["/init"]

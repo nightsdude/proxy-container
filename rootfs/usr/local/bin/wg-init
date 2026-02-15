@@ -1,0 +1,58 @@
+#!/bin/bash
+set -euo pipefail
+
+CONFIG_DIR="/config"
+WG_DIR="${CONFIG_DIR}/wg"
+WG_CONF="${WG_DIR}/wg0.conf"
+
+SERVER_PORT="${SERVER_PORT:-51820}"
+INTERNAL_SUBNET="${INTERNAL_SUBNET:-10.13.13.0/24}"
+
+# Derive server IP from subnet (first usable: x.x.x.1)
+SERVER_IP="${INTERNAL_SUBNET%.*}.1"
+SUBNET_MASK="${INTERNAL_SUBNET#*/}"
+
+mkdir -p "${WG_DIR}"
+mkdir -p "${CONFIG_DIR}/peers"
+
+if [ ! -f "${WG_CONF}" ]; then
+    echo "[wg-init] First run — generating server keys and config"
+
+    # Generate server keypair
+    SERVER_PRIVATE_KEY=$(wg genkey)
+    SERVER_PUBLIC_KEY=$(echo "${SERVER_PRIVATE_KEY}" | wg pubkey)
+
+    echo "${SERVER_PRIVATE_KEY}" > "${WG_DIR}/server_private.key"
+    echo "${SERVER_PUBLIC_KEY}" > "${WG_DIR}/server_public.key"
+    chmod 600 "${WG_DIR}/server_private.key"
+
+    # Detect default outbound interface
+    DEFAULT_IFACE=$(ip -o -4 route show default | awk '{print $5}' | head -1)
+
+    # Write server config
+    cat > "${WG_CONF}" <<EOF
+[Interface]
+Address = ${SERVER_IP}/${SUBNET_MASK}
+ListenPort = ${SERVER_PORT}
+PrivateKey = ${SERVER_PRIVATE_KEY}
+MTU = 1420
+PostUp = iptables -t nat -A POSTROUTING -o ${DEFAULT_IFACE} -j MASQUERADE
+PostUp = iptables -A FORWARD -i wg0 -j ACCEPT
+PostUp = iptables -A FORWARD -o wg0 -m state --state RELATED,ESTABLISHED -j ACCEPT
+PostDown = iptables -t nat -D POSTROUTING -o ${DEFAULT_IFACE} -j MASQUERADE
+PostDown = iptables -D FORWARD -i wg0 -j ACCEPT
+PostDown = iptables -D FORWARD -o wg0 -m state --state RELATED,ESTABLISHED -j ACCEPT
+EOF
+
+    echo "[wg-init] Server config created at ${WG_CONF}"
+    echo "[wg-init] Server public key: ${SERVER_PUBLIC_KEY}"
+else
+    echo "[wg-init] Existing config found at ${WG_CONF}"
+fi
+
+# Track next available IP for peer allocation
+if [ ! -f "${CONFIG_DIR}/next_ip" ]; then
+    echo "2" > "${CONFIG_DIR}/next_ip"
+fi
+
+echo "[wg-init] WireGuard initialization complete"
