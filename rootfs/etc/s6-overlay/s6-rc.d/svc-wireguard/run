@@ -1,0 +1,15 @@
+#!/command/with-contenv bash
+set -euo pipefail
+
+echo "[wireguard] Starting WireGuard interface wg0"
+
+# Bring up WireGuard
+wg-quick up /config/wg/wg0.conf
+
+# Keep the service running — s6 needs a foreground process
+# Monitor the interface and exit if it goes down
+while ip link show wg0 > /dev/null 2>&1; do
+    sleep 5
+done
+
+echo "[wireguard] Interface wg0 is down, exiting"

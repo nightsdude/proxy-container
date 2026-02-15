@@ -1,0 +1,3 @@
+#!/command/with-contenv bash
+echo "[wireguard] Stopping WireGuard interface wg0"
+wg-quick down /config/wg/wg0.conf 2>/dev/null || true
