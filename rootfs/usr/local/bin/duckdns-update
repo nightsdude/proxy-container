@@ -1,0 +1,18 @@
+#!/bin/bash
+set -euo pipefail
+
+DUCKDNS_TOKEN="${DUCKDNS_TOKEN:-}"
+DUCKDNS_SUBDOMAIN="${DUCKDNS_SUBDOMAIN:-}"
+
+if [ -z "${DUCKDNS_TOKEN}" ] || [ -z "${DUCKDNS_SUBDOMAIN}" ]; then
+    echo "[duckdns] DUCKDNS_TOKEN or DUCKDNS_SUBDOMAIN not set, skipping update"
+    exit 0
+fi
+
+RESPONSE=$(curl -s "https://www.duckdns.org/update?domains=${DUCKDNS_SUBDOMAIN}&token=${DUCKDNS_TOKEN}&ip=")
+
+if [ "${RESPONSE}" = "OK" ]; then
+    echo "[duckdns] Update successful"
+else
+    echo "[duckdns] Update failed: ${RESPONSE}"
+fi

@@ -1,0 +1,9 @@
+#!/command/with-contenv bash
+set -euo pipefail
+
+echo "[duckdns] Starting DuckDNS updater (every 60 seconds)"
+
+while true; do
+    /usr/local/bin/duckdns-update
+    sleep 60
+done
