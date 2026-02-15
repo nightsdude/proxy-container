@@ -1,0 +1,107 @@
+#!/bin/bash
+set -euo pipefail
+
+PEER_NAME="${1:-}"
+
+if [ -z "${PEER_NAME}" ]; then
+    echo "Usage: add-peer <name>"
+    echo "  name: alphanumeric identifier for the peer (e.g., my-phone)"
+    exit 1
+fi
+
+# Validate name
+if ! [[ "${PEER_NAME}" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+    echo "Error: peer name must be alphanumeric (with hyphens/underscores)"
+    exit 1
+fi
+
+CONFIG_DIR="/config"
+WG_CONF="${CONFIG_DIR}/wg/wg0.conf"
+PEER_DIR="${CONFIG_DIR}/peers/${PEER_NAME}"
+SERVER_URL="${SERVER_URL:-}"
+SERVER_PORT="${SERVER_PORT:-51820}"
+INTERNAL_SUBNET="${INTERNAL_SUBNET:-10.13.13.0/24}"
+SUBNET_BASE="${INTERNAL_SUBNET%.*}"
+
+# Check if peer already exists
+if [ -d "${PEER_DIR}" ]; then
+    echo "Error: peer '${PEER_NAME}' already exists"
+    echo "  Config: ${PEER_DIR}/${PEER_NAME}.conf"
+    exit 1
+fi
+
+# Get next available IP
+NEXT_IP_NUM=$(cat "${CONFIG_DIR}/next_ip")
+if [ "${NEXT_IP_NUM}" -gt 254 ]; then
+    echo "Error: no more IPs available in subnet"
+    exit 1
+fi
+PEER_IP="${SUBNET_BASE}.${NEXT_IP_NUM}"
+
+# Generate peer keypair
+PEER_PRIVATE_KEY=$(wg genkey)
+PEER_PUBLIC_KEY=$(echo "${PEER_PRIVATE_KEY}" | wg pubkey)
+PEER_PRESHARED_KEY=$(wg genpsk)
+
+# Read server public key
+SERVER_PUBLIC_KEY=$(cat "${CONFIG_DIR}/wg/server_public.key")
+
+# Create peer directory
+mkdir -p "${PEER_DIR}"
+
+# Save peer keys
+echo "${PEER_PRIVATE_KEY}" > "${PEER_DIR}/private.key"
+echo "${PEER_PUBLIC_KEY}" > "${PEER_DIR}/public.key"
+echo "${PEER_PRESHARED_KEY}" > "${PEER_DIR}/preshared.key"
+chmod 600 "${PEER_DIR}/private.key" "${PEER_DIR}/preshared.key"
+
+# Generate client config
+cat > "${PEER_DIR}/${PEER_NAME}.conf" <<EOF
+[Interface]
+PrivateKey = ${PEER_PRIVATE_KEY}
+Address = ${PEER_IP}/32
+DNS = ${SUBNET_BASE}.1
+MTU = 1420
+
+[Peer]
+PublicKey = ${SERVER_PUBLIC_KEY}
+PresharedKey = ${PEER_PRESHARED_KEY}
+Endpoint = ${SERVER_URL}:${SERVER_PORT}
+AllowedIPs = 0.0.0.0/0, ::/0
+PersistentKeepalive = 25
+EOF
+
+# Add peer to server config
+cat >> "${WG_CONF}" <<EOF
+
+# Peer: ${PEER_NAME}
+[Peer]
+PublicKey = ${PEER_PUBLIC_KEY}
+PresharedKey = ${PEER_PRESHARED_KEY}
+AllowedIPs = ${PEER_IP}/32
+EOF
+
+# Increment next IP
+echo $(( NEXT_IP_NUM + 1 )) > "${CONFIG_DIR}/next_ip"
+
+# Live-add peer if WireGuard is running
+if ip link show wg0 > /dev/null 2>&1; then
+    wg set wg0 peer "${PEER_PUBLIC_KEY}" \
+        preshared-key <(echo "${PEER_PRESHARED_KEY}") \
+        allowed-ips "${PEER_IP}/32"
+    echo "[add-peer] Peer added to running WireGuard interface"
+fi
+
+echo ""
+echo "========================================="
+echo "  Peer '${PEER_NAME}' created"
+echo "========================================="
+echo "  IP:     ${PEER_IP}"
+echo "  Config: ${PEER_DIR}/${PEER_NAME}.conf"
+echo "========================================="
+echo ""
+
+# Show QR code for mobile scanning
+echo "Scan this QR code with the WireGuard mobile app:"
+echo ""
+qrencode -t ansiutf8 < "${PEER_DIR}/${PEER_NAME}.conf"
