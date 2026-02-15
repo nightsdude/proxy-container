@@ -1,0 +1,37 @@
+#!/bin/bash
+set -euo pipefail
+
+CONFIG_DIR="/config"
+PEER_DIR="${CONFIG_DIR}/peers"
+
+if [ ! -d "${PEER_DIR}" ] || [ -z "$(ls -A "${PEER_DIR}" 2>/dev/null)" ]; then
+    echo "No peers configured."
+    exit 0
+fi
+
+# Get live handshake data if WireGuard is running
+declare -A HANDSHAKES
+if ip link show wg0 > /dev/null 2>&1; then
+    while IFS=$'\t' read -r pubkey _ _ _ handshake _; do
+        if [ "${handshake}" != "0" ]; then
+            HANDSHAKES["${pubkey}"]=$(date -d "@${handshake}" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || date -r "${handshake}" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "unknown")
+        fi
+    done < <(wg show wg0 dump | tail -n +2)
+fi
+
+printf "%-20s %-16s %-44s %s\n" "NAME" "IP" "PUBLIC KEY" "LAST HANDSHAKE"
+printf "%-20s %-16s %-44s %s\n" "----" "--" "----------" "--------------"
+
+for peer_dir in "${PEER_DIR}"/*/; do
+    [ -d "${peer_dir}" ] || continue
+    name=$(basename "${peer_dir}")
+    pubkey=$(cat "${peer_dir}/public.key" 2>/dev/null || echo "unknown")
+
+    # Extract IP from client config
+    ip=$(grep -o 'Address = [0-9.]*' "${peer_dir}/${name}.conf" 2>/dev/null | cut -d' ' -f3 || echo "unknown")
+    [ -z "${ip}" ] && ip="unknown"
+
+    handshake="${HANDSHAKES[${pubkey}]:-never}"
+
+    printf "%-20s %-16s %-44s %s\n" "${name}" "${ip}" "${pubkey}" "${handshake}"
+done
