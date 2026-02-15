@@ -27,12 +27,6 @@ RUN apk add --no-cache \
     libqrencode-tools \
     tzdata
 
-# Config volume
-VOLUME /config
-
-# WireGuard port
-EXPOSE 51820/udp
-
 # Copy rootfs overlay
 COPY rootfs/ /
 
@@ -41,5 +35,11 @@ RUN chmod +x /usr/local/bin/wg-init /usr/local/bin/duckdns-update \
               /usr/local/bin/add-peer /usr/local/bin/remove-peer \
               /usr/local/bin/list-peers && \
     find /etc/s6-overlay/s6-rc.d -name "run" -o -name "finish" -o -name "up" | xargs chmod +x
+
+# Config volume
+VOLUME /config
+
+# WireGuard port
+EXPOSE 51820/udp
 
 ENTRYPOINT ["/init"]
