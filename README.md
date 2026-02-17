@@ -161,15 +161,15 @@ Only devices that have been explicitly added can connect. WireGuard enforces thi
 ## How It Works
 
 ```
-Your Phone (abroad)           Raspberry Pi (home)          Internet
-┌─────────────┐     encrypted     ┌──────────────┐          ┌─────────┐
+Your Phone (abroad)              Raspberry Pi (home)         Internet
+┌──────────────┐    encrypted     ┌──────────────┐          ┌─────────┐
 │  WireGuard   │ ──── UDP ──────► │  WireGuard   │ ──NAT──► │ Website │
-│  Client      │    tunnel        │  Server      │          │         │
-│             │                  │  + Unbound   │          │ Sees    │
+│  Client      │     tunnel       │  Server      │          │         │
+│              │                  │  + Unbound   │          │ Sees    │
 │ All traffic  │                  │  + DuckDNS   │          │ Pi's IP │
 │ goes through │                  │              │          │         │
 │ the tunnel   │                  │ MASQUERADE   │          │         │
-└─────────────┘                  └──────────────┘          └─────────┘
+└──────────────┘                  └──────────────┘          └─────────┘
 ```
 
 1. All traffic from your device enters the encrypted WireGuard tunnel
