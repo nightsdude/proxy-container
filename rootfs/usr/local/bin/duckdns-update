@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/command/with-contenv bash
 set -euo pipefail
 
 DUCKDNS_TOKEN="${DUCKDNS_TOKEN:-}"

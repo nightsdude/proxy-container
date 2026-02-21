@@ -1,0 +1,6 @@
+.git
+docs/
+config/
+.env
+.env.example
+*.md

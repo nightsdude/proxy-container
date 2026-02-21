@@ -4,6 +4,6 @@ set -euo pipefail
 echo "[duckdns] Starting DuckDNS updater (every 60 seconds)"
 
 while true; do
-    /usr/local/bin/duckdns-update
+    /usr/local/bin/duckdns-update || true
     sleep 60
 done

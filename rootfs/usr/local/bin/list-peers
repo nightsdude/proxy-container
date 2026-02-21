@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/command/with-contenv bash
 set -euo pipefail
 
 CONFIG_DIR="/config"
@@ -19,19 +19,21 @@ if ip link show wg0 > /dev/null 2>&1; then
     done < <(wg show wg0 dump | tail -n +2)
 fi
 
-printf "%-20s %-16s %-44s %s\n" "NAME" "IP" "PUBLIC KEY" "LAST HANDSHAKE"
-printf "%-20s %-16s %-44s %s\n" "----" "--" "----------" "--------------"
+printf "%-20s %-30s %-44s %s\n" "NAME" "IP" "PUBLIC KEY" "LAST HANDSHAKE"
+printf "%-20s %-30s %-44s %s\n" "----" "--" "----------" "--------------"
 
 for peer_dir in "${PEER_DIR}"/*/; do
     [ -d "${peer_dir}" ] || continue
     name=$(basename "${peer_dir}")
     pubkey=$(cat "${peer_dir}/public.key" 2>/dev/null || echo "unknown")
 
-    # Extract IP from client config
+    # Extract IPs from client config
     ip=$(grep -o 'Address = [0-9.]*' "${peer_dir}/${name}.conf" 2>/dev/null | cut -d' ' -f3 || echo "unknown")
     [ -z "${ip}" ] && ip="unknown"
+    ip6=$(grep -o 'fd00::[0-9]*' "${peer_dir}/${name}.conf" 2>/dev/null | head -1 || echo "")
+    [ -n "${ip6}" ] && ip="${ip} / ${ip6}"
 
     handshake="${HANDSHAKES[${pubkey}]:-never}"
 
-    printf "%-20s %-16s %-44s %s\n" "${name}" "${ip}" "${pubkey}" "${handshake}"
+    printf "%-20s %-30s %-44s %s\n" "${name}" "${ip}" "${pubkey}" "${handshake}"
 done

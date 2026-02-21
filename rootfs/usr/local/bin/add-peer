@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/command/with-contenv bash
 set -euo pipefail
 
 PEER_NAME="${1:-}"
@@ -15,11 +15,29 @@ if ! [[ "${PEER_NAME}" =~ ^[a-zA-Z0-9_-]+$ ]]; then
     exit 1
 fi
 
+if [ "${#PEER_NAME}" -gt 64 ]; then
+    echo "Error: peer name must be 64 characters or fewer"
+    exit 1
+fi
+
 CONFIG_DIR="/config"
 WG_CONF="${CONFIG_DIR}/wg/wg0.conf"
 PEER_DIR="${CONFIG_DIR}/peers/${PEER_NAME}"
 SERVER_URL="${SERVER_URL:-}"
 SERVER_PORT="${SERVER_PORT:-51820}"
+
+if [ -z "${SERVER_URL}" ]; then
+    echo "Error: SERVER_URL environment variable is not set"
+    echo "  Set it in your .env file or pass it to docker exec"
+    exit 1
+fi
+
+if [ ! -f "${WG_CONF}" ]; then
+    echo "Error: WireGuard server config not found at ${WG_CONF}"
+    echo "  The container may not have finished initializing. Check: docker compose logs"
+    exit 1
+fi
+
 INTERNAL_SUBNET="${INTERNAL_SUBNET:-10.13.13.0/24}"
 SUBNET_BASE="${INTERNAL_SUBNET%.*}"
 
@@ -30,13 +48,24 @@ if [ -d "${PEER_DIR}" ]; then
     exit 1
 fi
 
-# Get next available IP
-NEXT_IP_NUM=$(cat "${CONFIG_DIR}/next_ip")
-if [ "${NEXT_IP_NUM}" -gt 254 ]; then
+# Find next available IP by scanning allocated peers
+USED_IPS=""
+if [ -f "${WG_CONF}" ]; then
+    ESCAPED_BASE=$(echo "${SUBNET_BASE}" | sed 's/\./\\./g')
+    USED_IPS=$(grep 'AllowedIPs' "${WG_CONF}" | grep -oE "${ESCAPED_BASE}\.[0-9]+" | grep -o '[0-9]*$' | sort -n)
+fi
+
+PEER_IP_NUM=2
+while echo "${USED_IPS}" | grep -qx "${PEER_IP_NUM}"; do
+    PEER_IP_NUM=$((PEER_IP_NUM + 1))
+done
+
+if [ "${PEER_IP_NUM}" -gt 254 ]; then
     echo "Error: no more IPs available in subnet"
     exit 1
 fi
-PEER_IP="${SUBNET_BASE}.${NEXT_IP_NUM}"
+PEER_IP="${SUBNET_BASE}.${PEER_IP_NUM}"
+PEER_IP6="fd00::${PEER_IP_NUM}"
 
 # Generate peer keypair
 PEER_PRIVATE_KEY=$(wg genkey)
@@ -59,8 +88,8 @@ chmod 600 "${PEER_DIR}/private.key" "${PEER_DIR}/preshared.key"
 cat > "${PEER_DIR}/${PEER_NAME}.conf" <<EOF
 [Interface]
 PrivateKey = ${PEER_PRIVATE_KEY}
-Address = ${PEER_IP}/32
-DNS = ${SUBNET_BASE}.1
+Address = ${PEER_IP}/32, ${PEER_IP6}/128
+DNS = ${SUBNET_BASE}.1, fd00::1
 MTU = 1420
 
 [Peer]
@@ -78,17 +107,14 @@ cat >> "${WG_CONF}" <<EOF
 [Peer]
 PublicKey = ${PEER_PUBLIC_KEY}
 PresharedKey = ${PEER_PRESHARED_KEY}
-AllowedIPs = ${PEER_IP}/32
+AllowedIPs = ${PEER_IP}/32, ${PEER_IP6}/128
 EOF
-
-# Increment next IP
-echo $(( NEXT_IP_NUM + 1 )) > "${CONFIG_DIR}/next_ip"
 
 # Live-add peer if WireGuard is running
 if ip link show wg0 > /dev/null 2>&1; then
     wg set wg0 peer "${PEER_PUBLIC_KEY}" \
         preshared-key <(echo "${PEER_PRESHARED_KEY}") \
-        allowed-ips "${PEER_IP}/32"
+        allowed-ips "${PEER_IP}/32,${PEER_IP6}/128"
     echo "[add-peer] Peer added to running WireGuard interface"
 fi
 
@@ -96,7 +122,8 @@ echo ""
 echo "========================================="
 echo "  Peer '${PEER_NAME}' created"
 echo "========================================="
-echo "  IP:     ${PEER_IP}"
+echo "  IPv4:   ${PEER_IP}"
+echo "  IPv6:   ${PEER_IP6}"
 echo "  Config: ${PEER_DIR}/${PEER_NAME}.conf"
 echo "========================================="
 echo ""

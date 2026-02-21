@@ -53,7 +53,7 @@ TZ=Europe/Warsaw
 |----------|-------------|
 | `SERVER_URL` | Your DuckDNS hostname (e.g., `myproxy.duckdns.org`) |
 | `SERVER_PORT` | WireGuard listen port (default: `51820`) |
-| `INTERNAL_SUBNET` | VPN subnet (default: `10.13.13.0/24`) |
+| `INTERNAL_SUBNET` | VPN subnet (default and recommended: `10.13.13.0/24`). Changing this requires also updating `rootfs/etc/unbound/unbound.conf`. The IPv6 ULA prefix (`fd00::/64`) is fixed and not controlled by this variable |
 | `DUCKDNS_TOKEN` | Your DuckDNS API token |
 | `DUCKDNS_SUBDOMAIN` | Your DuckDNS subdomain (without `.duckdns.org`) |
 | `TZ` | Timezone for the container (e.g., `Europe/Warsaw`) |
@@ -185,7 +185,7 @@ This setup is designed so websites cannot distinguish your traffic from someone 
 - **No DNS leaks** — all DNS resolves on the Pi via Unbound
 - **No WebRTC leaks** — full tunnel routes all protocols
 - **Standard MTU** (1420) — avoids packet size fingerprinting
-- **IPv6 leak prevention** — blocked if not available on the Pi's network
+- **IPv6 support** — tunneled via ULA prefix when available on the Pi's network, graceful degradation otherwise
 
 ### Client-side tips
 
