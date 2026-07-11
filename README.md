@@ -244,7 +244,11 @@ docker exec wireguard wg show
 
 ### IP changed and clients disconnected
 
-Clients reconnect automatically within ~1.5 minutes. The DuckDNS updater runs every 60 seconds, and WireGuard clients re-resolve the endpoint DNS periodically via `PersistentKeepalive`.
+The server side heals itself: within ~60 seconds the DuckDNS updater points your hostname at the new IP. Connected clients do not — WireGuard apps resolve the endpoint hostname only when a tunnel starts, so an already-running tunnel keeps sending to the old IP. (`PersistentKeepalive` keeps NAT mappings alive; it does not re-resolve DNS. This is true of the official apps on iOS, macOS, Android, and Windows.)
+
+**Fix on any device: toggle the tunnel off and back on** in the WireGuard app — it re-resolves the DuckDNS name on activation and reconnects within seconds. A device reboot also works. Nothing needs to be done on the Pi. If you toggle within a minute or two of the IP change, DNS may still be stale — wait a minute and toggle again.
+
+Linux laptops using `wg-quick` can automate recovery with the official [`reresolve-dns.sh`](https://git.zx2c4.com/wireguard-tools/tree/contrib/reresolve-dns) script on a cron/systemd timer.
 
 ### wg0 fails to start with "Unknown device type"
 

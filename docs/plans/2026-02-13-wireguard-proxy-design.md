@@ -145,10 +145,10 @@ iptables MASQUERADE on the container's `eth0`. All outbound traffic is source-NA
 ### IP Change Behavior
 
 1. Pi gets new IP from ISP
-2. Within 1 minute, DDNS cron updates DuckDNS
-3. WireGuard clients re-resolve DNS via `PersistentKeepalive = 25`
-4. Clients reconnect automatically — no user action needed
-5. Worst-case downtime: ~1.5 minutes
+2. Within 1 minute, DDNS cron updates DuckDNS (record TTL: 60 seconds)
+3. Already-connected clients keep sending to the stale IP — WireGuard resolves the endpoint hostname only at tunnel start; `PersistentKeepalive` does not trigger DNS re-resolution
+4. Recovery requires a tunnel restart on each client (toggle off/on or device reboot); tunnels started after the change resolve the new IP immediately
+5. Worst-case downtime for a connected client: until the user toggles the tunnel; reconnection then takes seconds
 
 ## Deployment
 
