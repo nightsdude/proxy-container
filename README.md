@@ -201,12 +201,59 @@ This setup is designed so websites cannot distinguish your traffic from someone 
 - **No DNS leaks** — all DNS resolves on the Pi via Unbound
 - **No WebRTC leaks** — full tunnel routes all protocols
 - **Standard MTU** (1420) — avoids packet size fingerprinting
-- **IPv6 support** — tunneled via ULA prefix when available on the Pi's network, graceful degradation otherwise
+- **No IPv6 leaks** — client IPv6 traffic is routed into the tunnel (`::/0`) and deliberately dropped at the server by default, so it can never bypass the VPN; IPv6 DNS (`fd00::1`) still works. Working IPv6 egress is available as an opt-in — see [Enabling real IPv6 egress](#enabling-real-ipv6-egress-optional)
 
 ### Client-side tips
 
 - **Timezone:** Set your device's timezone to match the Pi's location when browsing sensitive sites. Websites can detect timezone via JavaScript, and a mismatch (e.g., timezone says Tokyo but IP says Warsaw) can flag VPN usage.
 - **Browser fingerprinting:** Canvas, font, and screen resolution fingerprinting is unrelated to the proxy. Use browser privacy settings if this concerns you.
+
+## Enabling real IPv6 egress (optional)
+
+By default the container has no IPv6 connectivity: Docker does not give containers an
+IPv6 address unless the network is explicitly IPv6-enabled. Client IPv6 traffic still
+enters the tunnel (clients route `::/0` through it) but is dropped at the server — a
+deliberate anti-leak sinkhole. Dual-stack apps fall back to IPv4 automatically.
+
+To give clients working IPv6 through the tunnel, all of the following are required:
+
+1. **IPv6 from your ISP.** The Pi must have a global IPv6 address:
+
+   ```bash
+   ip -6 addr show scope global
+   # Must show an address NOT starting with fd or fe80
+   ```
+
+   If this shows nothing, stop here — leave IPv6 off. The default sinkhole is safer
+   than half-working IPv6.
+
+2. **An IPv6-enabled Docker network.** Add to the bottom of `docker-compose.yml`:
+
+   ```yaml
+   networks:
+     default:
+       enable_ipv6: true
+   ```
+
+   Then recreate the container: `docker compose down && docker compose up -d`.
+
+   On Docker Engine 27 or newer (what `get.docker.com` installs) nothing else is
+   needed: Docker auto-allocates a private (ULA) subnet, and its default ip6tables
+   integration NATs the container's IPv6 traffic to the Pi's global address.
+
+3. **Verify:**
+
+   ```bash
+   docker exec wireguard ping -6 -c 1 2606:4700:4700::1111
+   ```
+
+   Then from a connected client, visit https://test-ipv6.com — the IPv6 address shown
+   must belong to your home ISP (same network as your IPv4).
+
+Traffic path: client `fd00::x` → tunnel → container NAT → container's Docker ULA
+address → Docker NAT → Pi's global IPv6 address. Do not enable this on a Pi without
+ISP IPv6: the container would gain a dead IPv6 route and internal services would waste
+time attempting IPv6 before falling back to IPv4.
 
 ## Backup and Restore
 
