@@ -6,6 +6,11 @@ echo "[wireguard] Starting WireGuard interface wg0"
 # Bring up WireGuard
 wg-quick up /config/wg/wg0.conf
 
+# Signal readiness to s6 (see notification-fd) — dependent services
+# such as svc-unbound are only started after this point
+echo >&3
+exec 3>&-
+
 # Keep the service running — s6 needs a foreground process
 # Monitor the interface and exit if it goes down
 while ip link show wg0 > /dev/null 2>&1; do
