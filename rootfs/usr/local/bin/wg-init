@@ -31,6 +31,11 @@ if [ ! -f "${WG_CONF}" ]; then
 
     # Detect default outbound interface
     DEFAULT_IFACE=$(ip -o -4 route show default | awk '{print $5}' | head -1)
+    if [ -z "${DEFAULT_IFACE}" ]; then
+        echo "[wg-init] ERROR: no default route found — cannot detect outbound interface." >&2
+        echo "[wg-init] Refusing to write a broken wg0.conf; will retry on next container start." >&2
+        exit 1
+    fi
 
     # Write server config
     cat > "${WG_CONF}" <<EOF
