@@ -14,7 +14,7 @@ A Docker container that runs a WireGuard VPN server on a Raspberry Pi, acting as
 ## Prerequisites
 
 - Raspberry Pi 4 (2GB+ RAM recommended) running a 64-bit OS
-- Docker and Docker Compose installed
+- Docker Engine 25+ and Docker Compose installed (the image build uses BuildKit's checksum-verified downloads)
 - A [DuckDNS](https://www.duckdns.org/) account (free)
 - UDP port 51820 forwarded on your router to the Pi's LAN IP
 
