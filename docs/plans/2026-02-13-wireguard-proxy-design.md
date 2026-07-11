@@ -33,9 +33,6 @@ services:
     container_name: wireguard
     cap_add:
       - NET_ADMIN
-      - SYS_MODULE
-    devices:
-      - /dev/net/tun:/dev/net/tun
     ports:
       - "51820:51820/udp"
     volumes:
@@ -63,9 +60,17 @@ services:
 
 ### Required Capabilities
 
-- `NET_ADMIN` — manage network interfaces and iptables
-- `SYS_MODULE` — load WireGuard kernel module
-- `/dev/net/tun` — tunnel device access
+- `NET_ADMIN` — create the wg0 interface, manage routes and iptables. The host
+  kernel autoloads the in-tree `wireguard` module on `ip link add ... type
+  wireguard` (`request_module("rtnl-link-wireguard")` runs host-side), so the
+  container needs no module-loading privilege.
+
+Deliberately **not** granted:
+
+- `SYS_MODULE` — not needed for kernel-mode WireGuard; would let container root
+  load arbitrary code into the host kernel (full host compromise).
+- `/dev/net/tun` — only used by userspace implementations
+  (wireguard-go/boringtun), which are not installed in this image.
 
 ## Peer Management (Whitelist System)
 

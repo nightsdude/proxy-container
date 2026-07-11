@@ -246,6 +246,17 @@ docker exec wireguard wg show
 
 Clients reconnect automatically within ~1.5 minutes. The DuckDNS updater runs every 60 seconds, and WireGuard clients re-resolve the endpoint DNS periodically via `PersistentKeepalive`.
 
+### wg0 fails to start with "Unknown device type"
+
+The host kernel normally autoloads the WireGuard module when the container
+creates the interface. If it doesn't (typically right after a kernel upgrade,
+before a reboot), reboot the Pi, or make the module load at every boot:
+
+```bash
+echo wireguard | sudo tee /etc/modules-load.d/wireguard.conf
+sudo modprobe wireguard
+```
+
 ### DNS not working through the tunnel
 
 Check that Unbound is running: `docker exec wireguard pgrep unbound`
