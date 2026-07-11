@@ -26,7 +26,6 @@ CONFIG_DIR="/config"
 WG_CONF="${CONFIG_DIR}/wg/wg0.conf"
 PEER_DIR="${CONFIG_DIR}/peers/${PEER_NAME}"
 SERVER_URL="${SERVER_URL:-}"
-SERVER_PORT="${SERVER_PORT:-51820}"
 
 if [ -z "${SERVER_URL}" ]; then
     echo "Error: SERVER_URL environment variable is not set"
@@ -40,8 +39,11 @@ if [ ! -f "${WG_CONF}" ]; then
     exit 1
 fi
 
-INTERNAL_SUBNET="${INTERNAL_SUBNET:-10.13.13.0/24}"
-SUBNET_BASE="${INTERNAL_SUBNET%.*}"
+# Derive subnet and port from the server config — wg0.conf is the single
+# source of truth once it exists (env vars only shape the first run).
+SERVER_ADDRESS=$(grep '^Address' "${WG_CONF}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+SUBNET_BASE="${SERVER_ADDRESS%.*}"
+SERVER_PORT=$(sed -n 's/^ListenPort *= *//p' "${WG_CONF}")
 
 # Check if peer already exists
 if [ -d "${PEER_DIR}" ]; then

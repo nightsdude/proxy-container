@@ -52,8 +52,8 @@ TZ=Europe/Warsaw
 | Variable | Description |
 |----------|-------------|
 | `SERVER_URL` | Your DuckDNS hostname (e.g., `myproxy.duckdns.org`) |
-| `SERVER_PORT` | WireGuard listen port (default: `51820`) |
-| `INTERNAL_SUBNET` | VPN subnet (default and recommended: `10.13.13.0/24`). Changing this requires also updating `rootfs/etc/unbound/unbound.conf`. The IPv6 ULA prefix (`fd00::/64`) is fixed and not controlled by this variable |
+| `SERVER_PORT` | WireGuard listen port (default: `51820`). Can be changed later — see [Changing settings after first run](#changing-settings-after-first-run) |
+| `INTERNAL_SUBNET` | VPN subnet (default and recommended: `10.13.13.0/24`). **Takes effect on first run only** — see [Changing settings after first run](#changing-settings-after-first-run). Changing this requires also updating `rootfs/etc/unbound/unbound.conf`. The IPv6 ULA prefix (`fd00::/64`) is fixed and not controlled by this variable |
 | `DUCKDNS_TOKEN` | Your DuckDNS API token |
 | `DUCKDNS_SUBDOMAIN` | Your DuckDNS subdomain (without `.duckdns.org`) |
 | `TZ` | Timezone for the container (e.g., `Europe/Warsaw`) |
@@ -157,6 +157,22 @@ docker exec wireguard list-peers
 ```
 
 Only devices that have been explicitly added can connect. WireGuard enforces this cryptographically — there is no way to connect without a valid keypair.
+
+## Changing settings after first run
+
+The WireGuard server config (`./config/wg/wg0.conf`) is generated once, on first
+start. After that, editing `.env` and running `docker compose up -d` has the
+following effects:
+
+| Variable | What happens |
+|----------|--------------|
+| `SERVER_PORT` | Applied automatically on the next start (the container updates `wg0.conf` and logs a warning). **Existing peer configs still point at the old port** — re-issue each one (`remove-peer <name>` then `add-peer <name>`) and update your router's port forward |
+| `INTERNAL_SUBNET` | **Ignored** (a warning is logged). To actually change the subnet: `docker compose down`, delete `./config/wg` and `./config/peers`, `docker compose up -d`, then re-add every peer. This regenerates the server keys, so all devices must be re-onboarded |
+| `SERVER_URL` | Used for peers created from now on. Already-deployed peer configs keep the old hostname — re-issue them if the hostname changed |
+| `DUCKDNS_TOKEN`, `DUCKDNS_SUBDOMAIN`, `TZ` | Applied on the next `docker compose up -d` |
+
+If clients suddenly cannot connect after you edited `.env`, check the container
+logs for `[wg-init] WARNING` lines: `docker compose logs wireguard | grep WARNING`
 
 ## How It Works
 
