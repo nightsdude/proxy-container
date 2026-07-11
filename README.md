@@ -5,7 +5,7 @@ A Docker container that runs a WireGuard VPN server on a Raspberry Pi, acting as
 ## Features
 
 - **Full tunnel VPN** — all traffic (TCP, UDP, DNS, WebRTC) routed through the Pi
-- **Built-in DNS resolver** (Unbound) — prevents DNS leaks, no geolocation mismatch
+- **Built-in validating DNS resolver** (Unbound with DNSSEC validation) — prevents DNS leaks, detects spoofed or poisoned DNS answers, no geolocation mismatch
 - **Dynamic DNS** (DuckDNS) — auto-updates every 60 seconds when your IP changes
 - **Whitelist-only access** — devices must be explicitly added via CLI
 - **QR code onboarding** — scan from the WireGuard mobile app to connect instantly

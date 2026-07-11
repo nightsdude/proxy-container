@@ -13,6 +13,13 @@ sed -e "s|@SERVER_IP@|${SERVER_IP}|g" \
     -e "s|@SUBNET@|${SUBNET}|g" \
     /etc/unbound/unbound.conf.template > /etc/unbound/unbound.conf
 
+echo "[unbound] Refreshing DNSSEC root trust anchor"
+mkdir -p /var/lib/unbound
+# unbound-anchor exits 1 when it (re)creates the anchor from its builtin
+# keys or the IANA certificate fallback — that is success, not an error.
+unbound-anchor -a /var/lib/unbound/root.key || true
+chown -R unbound:unbound /var/lib/unbound
+
 echo "[unbound] Starting Unbound DNS resolver on ${SERVER_IP}:53"
 
 # Run in foreground (-d)

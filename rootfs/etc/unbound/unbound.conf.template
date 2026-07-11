@@ -20,6 +20,8 @@ server:
     hide-version: yes
     harden-glue: yes
     harden-dnssec-stripped: yes
+    # DNSSEC validation (anchor is created/refreshed by svc-unbound at startup)
+    auto-trust-anchor-file: "/var/lib/unbound/root.key"
     use-caps-for-id: yes
 
     # Performance
