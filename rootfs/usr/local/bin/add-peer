@@ -1,5 +1,6 @@
 #!/command/with-contenv bash
 set -euo pipefail
+trap 'echo "Error: add-peer failed at line ${LINENO} (exit $?)" >&2' ERR
 
 PEER_NAME="${1:-}"
 
@@ -52,7 +53,7 @@ fi
 USED_IPS=""
 if [ -f "${WG_CONF}" ]; then
     ESCAPED_BASE=$(echo "${SUBNET_BASE}" | sed 's/\./\\./g')
-    USED_IPS=$(grep 'AllowedIPs' "${WG_CONF}" | grep -oE "${ESCAPED_BASE}\.[0-9]+" | grep -o '[0-9]*$' | sort -n)
+    USED_IPS=$(grep 'AllowedIPs' "${WG_CONF}" | grep -oE "${ESCAPED_BASE}\.[0-9]+" | grep -o '[0-9]*$' | sort -n || true)
 fi
 
 PEER_IP_NUM=2
