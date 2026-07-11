@@ -89,57 +89,35 @@ Import it into the WireGuard desktop client.
 
 ## Auto-Start on Boot
 
-The Pi may lose power unexpectedly. To ensure the proxy comes back up automatically after a reboot:
+No extra setup is needed — the proxy already comes back automatically after a reboot or power loss:
 
-### 1. Enable Docker on boot
+1. **Docker starts on boot.** The install steps above ran `systemctl enable docker` (on Raspberry Pi OS and other Debian-based systems this is the default anyway).
+2. **Docker restarts the container.** `docker-compose.yml` sets `restart: unless-stopped`. Docker stores this policy with the container, and the daemon restarts any container that was running when the system went down — including an unclean shutdown like a power cut. No user needs to be logged in; the Docker daemon is a system service.
 
-If you followed the install steps above, Docker is already enabled. Verify with:
+After a power loss: the Pi boots, Docker starts the container, and within ~60 seconds DuckDNS updates your IP. Clients reconnect automatically if the public IP stayed the same; if it changed, see [IP changed and clients disconnected](#ip-changed-and-clients-disconnected).
+
+### Verify
 
 ```bash
 sudo systemctl is-enabled docker
 # Should print: enabled
+
+docker inspect -f '{{.HostConfig.RestartPolicy.Name}}' wireguard
+# Should print: unless-stopped
 ```
 
-### 2. Create a systemd service for the proxy
-
-This ensures `docker compose up` runs after Docker starts, even if no user is logged in:
+For a full end-to-end check, run `sudo reboot`, wait for the Pi to come back, then:
 
 ```bash
-sudo tee /etc/systemd/system/wireguard-proxy.service > /dev/null <<'EOF'
-[Unit]
-Description=WireGuard Personal Proxy
-Requires=docker.service
-After=docker.service
-
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-WorkingDirectory=/home/pi/proxy-container
-ExecStart=/usr/bin/docker compose up -d
-ExecStop=/usr/bin/docker compose down
-TimeoutStartSec=0
-
-[Install]
-WantedBy=multi-user.target
-EOF
-```
-
-Adjust `WorkingDirectory` to match where you cloned the repo. Then enable it:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable wireguard-proxy.service
-```
-
-### 3. Verify it works
-
-```bash
-# Simulate a reboot cycle
-sudo systemctl start wireguard-proxy
 docker exec wireguard wg show
 ```
 
-After a power loss, the Pi boots, Docker starts, the systemd service runs `docker compose up -d`, and within ~60 seconds DuckDNS updates your IP. Clients reconnect automatically.
+### When it will *not* auto-start
+
+Docker deliberately does not resurrect a container you stopped yourself:
+
+- After `docker stop wireguard` or `docker compose stop`, the container stays stopped across reboots until you start it again.
+- After `docker compose down`, the container is removed entirely (its restart policy is removed with it). Run `docker compose up -d` to bring the proxy back.
 
 ## Peer Management
 
