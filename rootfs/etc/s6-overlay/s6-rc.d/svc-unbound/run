@@ -1,7 +1,19 @@
 #!/command/with-contenv bash
 set -euo pipefail
 
-echo "[unbound] Starting Unbound DNS resolver on 10.13.13.1:53"
+WG_CONF="/config/wg/wg0.conf"
+
+# Derive the server IP and subnet from the persisted WireGuard config
+# (single source of truth — wg-init wrote it from INTERNAL_SUBNET on first run)
+SERVER_IP=$(sed -n 's|^Address *= *\([0-9.]*\)/.*|\1|p' "${WG_CONF}")
+PREFIX=$(sed -n 's|^Address *= *[0-9.]*/\([0-9]*\).*|\1|p' "${WG_CONF}")
+SUBNET="${SERVER_IP%.*}.0/${PREFIX}"
+
+sed -e "s|@SERVER_IP@|${SERVER_IP}|g" \
+    -e "s|@SUBNET@|${SUBNET}|g" \
+    /etc/unbound/unbound.conf.template > /etc/unbound/unbound.conf
+
+echo "[unbound] Starting Unbound DNS resolver on ${SERVER_IP}:53"
 
 # Run in foreground (-d)
 exec unbound -d -c /etc/unbound/unbound.conf

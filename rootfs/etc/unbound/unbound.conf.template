@@ -1,6 +1,6 @@
 server:
     verbosity: 1
-    interface: 10.13.13.1
+    interface: @SERVER_IP@
     interface: fd00::1
     port: 53
     do-ip4: yes
@@ -9,7 +9,7 @@ server:
     do-tcp: yes
 
     # Access control — only WireGuard clients
-    access-control: 10.13.13.0/24 allow
+    access-control: @SUBNET@ allow
     access-control: fd00::/64 allow
     access-control: 127.0.0.0/8 allow
     access-control: 0.0.0.0/0 refuse
