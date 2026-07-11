@@ -1,5 +1,6 @@
 #!/command/with-contenv bash
 set -euo pipefail
+umask 077
 
 CONFIG_DIR="/config"
 WG_DIR="${CONFIG_DIR}/wg"
@@ -14,6 +15,8 @@ SUBNET_MASK="${INTERNAL_SUBNET#*/}"
 
 mkdir -p "${WG_DIR}"
 mkdir -p "${CONFIG_DIR}/peers"
+# Retrofit existing installs — mkdir -p does not tighten pre-existing dirs
+chmod 700 "${WG_DIR}" "${CONFIG_DIR}/peers"
 
 if [ ! -f "${WG_CONF}" ]; then
     echo "[wg-init] First run — generating server keys and config"

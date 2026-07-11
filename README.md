@@ -78,11 +78,11 @@ docker exec wireguard add-peer my-phone
 
 This outputs a QR code in the terminal. Open the WireGuard app on your phone and scan it.
 
-For laptops/desktops, copy the generated config file:
+For laptops/desktops, copy the generated config file (it contains the
+device's private key, so it is root-owned and readable only with sudo):
 
 ```bash
-# The config is saved at:
-# ./config/peers/my-phone/my-phone.conf
+sudo cat ./config/peers/my-phone/my-phone.conf
 ```
 
 Import it into the WireGuard desktop client.
