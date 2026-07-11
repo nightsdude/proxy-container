@@ -42,4 +42,13 @@ VOLUME /config
 # WireGuard port
 EXPOSE 51820/udp
 
+# If any s6-rc service fails to start (e.g. init-wireguard), stop the container
+# so Docker's restart policy retries instead of leaving a dead-but-"Up" container.
+ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
+
+# Surface VPN health in `docker ps`. Visibility only: Docker does NOT restart
+# unhealthy containers — the restart path is S6_BEHAVIOUR_IF_STAGE2_FAILS above.
+HEALTHCHECK --interval=60s --timeout=10s --start-period=120s --retries=3 \
+    CMD wg show wg0 || exit 1
+
 ENTRYPOINT ["/init"]
