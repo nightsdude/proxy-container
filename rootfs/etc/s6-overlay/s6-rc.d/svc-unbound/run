@@ -7,6 +7,10 @@ WG_CONF="/config/wg/wg0.conf"
 # (single source of truth — wg-init wrote it from INTERNAL_SUBNET on first run)
 SERVER_IP=$(sed -n 's|^Address *= *\([0-9.]*\)/.*|\1|p' "${WG_CONF}")
 PREFIX=$(sed -n 's|^Address *= *[0-9.]*/\([0-9]*\).*|\1|p' "${WG_CONF}")
+if [ -z "${SERVER_IP}" ] || [ -z "${PREFIX}" ]; then
+    echo "[unbound] ERROR: could not read server Address from ${WG_CONF} — is the WireGuard config corrupt?" >&2
+    exit 1
+fi
 SUBNET="${SERVER_IP%.*}.0/${PREFIX}"
 
 sed -e "s|@SERVER_IP@|${SERVER_IP}|g" \

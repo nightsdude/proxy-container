@@ -66,7 +66,7 @@ else
     # Sync ListenPort with SERVER_PORT — the compose port mapping follows
     # SERVER_PORT, so a stale ListenPort would leave the VPN unreachable.
     CURRENT_PORT=$(sed -n 's/^ListenPort *= *//p' "${WG_CONF}")
-    if [ "${CURRENT_PORT}" != "${SERVER_PORT}" ]; then
+    if [ -n "${CURRENT_PORT}" ] && [ "${CURRENT_PORT}" != "${SERVER_PORT}" ]; then
         sed -i "s/^ListenPort *=.*/ListenPort = ${SERVER_PORT}/" "${WG_CONF}"
         chmod 600 "${WG_CONF}"
         echo "[wg-init] WARNING: SERVER_PORT changed (${CURRENT_PORT} -> ${SERVER_PORT}); updated ListenPort in wg0.conf"
@@ -75,8 +75,8 @@ else
     fi
 
     # INTERNAL_SUBNET cannot be changed in place — warn if it diverged.
-    CURRENT_IP=$(grep '^Address' "${WG_CONF}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-    if [ "${CURRENT_IP}" != "${SERVER_IP}" ]; then
+    CURRENT_IP=$(grep '^Address' "${WG_CONF}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
+    if [ -n "${CURRENT_IP}" ] && [ "${CURRENT_IP}" != "${SERVER_IP}" ]; then
         echo "[wg-init] WARNING: INTERNAL_SUBNET (${INTERNAL_SUBNET}) does not match the existing server address (${CURRENT_IP})"
         echo "[wg-init] WARNING: INTERNAL_SUBNET only takes effect on first run — the existing subnet is kept"
         echo "[wg-init] WARNING: to change the subnet, delete ./config/wg and ./config/peers, restart, and re-issue all peers"
