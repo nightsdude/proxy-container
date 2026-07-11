@@ -9,6 +9,17 @@ if [ -z "${PEER_NAME}" ]; then
     exit 1
 fi
 
+# Validate name
+if ! [[ "${PEER_NAME}" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+    echo "Error: peer name must be alphanumeric (with hyphens/underscores)"
+    exit 1
+fi
+
+if [ "${#PEER_NAME}" -gt 64 ]; then
+    echo "Error: peer name must be 64 characters or fewer"
+    exit 1
+fi
+
 CONFIG_DIR="/config"
 WG_CONF="${CONFIG_DIR}/wg/wg0.conf"
 PEER_DIR="${CONFIG_DIR}/peers/${PEER_NAME}"
