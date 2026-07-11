@@ -9,10 +9,15 @@ if [ -z "${DUCKDNS_TOKEN}" ] || [ -z "${DUCKDNS_SUBDOMAIN}" ]; then
     exit 0
 fi
 
-RESPONSE=$(curl -s "https://www.duckdns.org/update?domains=${DUCKDNS_SUBDOMAIN}&token=${DUCKDNS_TOKEN}&ip=")
+RESPONSE=$(curl -fsS --max-time 10 "https://www.duckdns.org/update?domains=${DUCKDNS_SUBDOMAIN}&token=${DUCKDNS_TOKEN}&ip=") || {
+    rc=$?
+    echo "[duckdns] Update request failed (curl exit ${rc})"
+    exit "${rc}"
+}
 
 if [ "${RESPONSE}" = "OK" ]; then
     echo "[duckdns] Update successful"
 else
     echo "[duckdns] Update failed: ${RESPONSE}"
+    exit 1
 fi
