@@ -21,7 +21,12 @@ echo "[unbound] Refreshing DNSSEC root trust anchor"
 mkdir -p /var/lib/unbound
 # unbound-anchor exits 1 when it (re)creates the anchor from its builtin
 # keys or the IANA certificate fallback — that is success, not an error.
+# The real post-condition is a usable anchor file, checked below.
 unbound-anchor -a /var/lib/unbound/root.key || true
+if [ ! -s /var/lib/unbound/root.key ]; then
+    echo "[unbound] ERROR: DNSSEC root trust anchor was not created — refusing to start without validation" >&2
+    exit 1
+fi
 chown -R unbound:unbound /var/lib/unbound
 
 echo "[unbound] Starting Unbound DNS resolver on ${SERVER_IP}:53"
