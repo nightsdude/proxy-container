@@ -38,6 +38,11 @@ if [ ! -f "${WG_CONF}" ]; then
         exit 1
     fi
 
+    if [ -n "$(ls -A "${CONFIG_DIR}/peers" 2>/dev/null)" ]; then
+        echo "[wg-init] WARNING: found existing peer directories but no server config — new server keys will be generated"
+        echo "[wg-init] WARNING: every existing peer config is now invalid; run remove-peer then add-peer for each device"
+    fi
+
     # Generate server keypair
     SERVER_PRIVATE_KEY=$(wg genkey)
     SERVER_PUBLIC_KEY=$(echo "${SERVER_PRIVATE_KEY}" | wg pubkey)
