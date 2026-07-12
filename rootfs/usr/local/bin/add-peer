@@ -39,6 +39,11 @@ if [ ! -f "${WG_CONF}" ]; then
     exit 1
 fi
 
+# Serialize peer operations — add-peer and remove-peer both rewrite wg0.conf
+# and concurrent runs would race on IP allocation.
+exec 9>"${CONFIG_DIR}/.peers.lock"
+flock -x 9
+
 # Derive subnet and port from the server config — wg0.conf is the single
 # source of truth once it exists (env vars only shape the first run).
 SERVER_ADDRESS=$(grep '^Address' "${WG_CONF}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -1)
@@ -104,8 +109,10 @@ AllowedIPs = 0.0.0.0/0, ::/0
 PersistentKeepalive = 25
 EOF
 
-# Add peer to server config
-cat >> "${WG_CONF}" <<EOF
+# Add peer to server config (write-then-rename so an interrupted run can
+# never leave a half-appended [Peer] block behind)
+cp "${WG_CONF}" "${WG_CONF}.tmp"
+cat >> "${WG_CONF}.tmp" <<EOF
 
 # Peer: ${PEER_NAME}
 [Peer]
@@ -113,6 +120,7 @@ PublicKey = ${PEER_PUBLIC_KEY}
 PresharedKey = ${PEER_PRESHARED_KEY}
 AllowedIPs = ${PEER_IP}/32, ${PEER_IP6}/128
 EOF
+mv "${WG_CONF}.tmp" "${WG_CONF}"
 
 # Live-add peer if WireGuard is running
 if ip link show wg0 > /dev/null 2>&1; then
