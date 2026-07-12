@@ -39,6 +39,8 @@ svc-duckdns (longrun, independent: updates DuckDNS every 60s)
 
 `S6_BEHAVIOUR_IF_STAGE2_FAILS=2` in the Dockerfile means a failed service start kills the whole container so Docker's `restart: unless-stopped` retries it — init scripts should `exit 1` on unrecoverable errors rather than limp along. The HEALTHCHECK is visibility-only; Docker does not restart unhealthy containers.
 
+`svc-wireguard` has a 60s `timeout-up`, so a persistently failing `wg-quick up` (e.g. missing kernel module) fails stage2 and kills the container instead of hanging it in a supervised crash-loop forever.
+
 ### Config lifecycle: wg0.conf is the source of truth
 
 Environment variables from `.env` shape the **first run only**. Once `/config/wg/wg0.conf` exists (persisted in the `./config` volume), it is the single source of truth: `add-peer` and `svc-unbound` derive the subnet, server IP, and port by parsing `wg0.conf`, not from env vars. Two deliberate exceptions in `wg-init`:

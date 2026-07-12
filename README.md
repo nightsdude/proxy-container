@@ -297,6 +297,8 @@ echo wireguard | sudo tee /etc/modules-load.d/wireguard.conf
 sudo modprobe wireguard
 ```
 
+While the module is unavailable the container exits and Docker restarts it in a loop (visible in `docker ps` as a recent "Restarting"/short uptime), so it recovers by itself once the module loads.
+
 ### DNS not working through the tunnel
 
 Check that Unbound is running: `docker exec wireguard pgrep unbound`
