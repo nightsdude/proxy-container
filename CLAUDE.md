@@ -64,6 +64,7 @@ Clients route `::/0` into the tunnel, but the container has no IPv6 egress by de
 ## Design Constraints
 
 - **Anti-detection is a core requirement**: traffic must be indistinguishable from direct browsing on the Pi's network. No proxy headers, DNS resolves only via Unbound inside the container, MTU stays at 1420, full-tunnel (`AllowedIPs = 0.0.0.0/0, ::/0`).
+- **Client isolation**: generated configs DROP forwarded traffic from wg0 to RFC1918/ULA destinations before the ACCEPT rule — VPN clients are internet-only. All PostUp rules use `-C ... || -A ...` so interface flaps don't duplicate them. Preserve both properties when touching the firewall block.
 - **Minimal attack surface**: only UDP 51820 exposed; no web UI or management ports. Management happens via `docker exec` only.
 - **Key hygiene**: scripts set `umask 077`; key files and `wg0.conf` are chmod 600, key directories 700. Preserve this in any script that touches `/config`.
 - **Supply-chain pinning**: s6-overlay downloads use `ADD --checksum` with per-arch build stages selected by `TARGETARCH`. When bumping `S6_OVERLAY_VERSION`, update all three sha256 checksums from the release's `.sha256` files.

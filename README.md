@@ -180,11 +180,22 @@ This setup is designed so websites cannot distinguish your traffic from someone 
 - **No WebRTC leaks** — full tunnel routes all protocols
 - **Standard MTU** (1420) — avoids packet size fingerprinting
 - **No IPv6 leaks** — client IPv6 traffic is routed into the tunnel (`::/0`) and deliberately dropped at the server by default, so it can never bypass the VPN; IPv6 DNS (`fd00::1`) still works. Working IPv6 egress is available as an opt-in — see [Enabling real IPv6 egress](#enabling-real-ipv6-egress-optional)
+- **LAN isolation** — VPN clients can only reach the internet: forwarded traffic from the tunnel to private ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `fc00::/7`) is dropped, so a lost or stolen peer config cannot be used to reach devices on your home network, and peers cannot see each other. DNS (served from inside the container) still works.
 
 ### Client-side tips
 
 - **Timezone:** Set your device's timezone to match the Pi's location when browsing sensitive sites. Websites can detect timezone via JavaScript, and a mismatch (e.g., timezone says Tokyo but IP says Warsaw) can flag VPN usage.
 - **Browser fingerprinting:** Canvas, font, and screen resolution fingerprinting is unrelated to the proxy. Use browser privacy settings if this concerns you.
+
+### Client isolation on existing installs
+
+`wg0.conf` is generated once, so installs created before LAN isolation keep the old
+firewall block (the container logs a `[wg-init] WARNING` about it). To migrate without
+re-onboarding devices: stop the container, edit `./config/wg/wg0.conf` (as root), replace
+the `PostUp`/`PostDown` lines with the block a fresh install generates (see
+`rootfs/usr/local/bin/wg-init` — substitute your uplink interface, normally `eth0`, for
+`${DEFAULT_IFACE}`), and start the container again. Alternatively, delete `./config/wg`
+and `./config/peers` and re-add every peer.
 
 ## Enabling real IPv6 egress (optional)
 

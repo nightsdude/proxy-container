@@ -66,16 +66,24 @@ Address = ${SERVER_IP}/${SUBNET_MASK}, fd00::1/64
 ListenPort = ${SERVER_PORT}
 PrivateKey = ${SERVER_PRIVATE_KEY}
 MTU = 1420
-PostUp = iptables -t nat -A POSTROUTING -o ${DEFAULT_IFACE} -j MASQUERADE
-PostUp = iptables -A FORWARD -i wg0 -j ACCEPT
-PostUp = iptables -A FORWARD -o wg0 -m state --state RELATED,ESTABLISHED -j ACCEPT
-PostUp = ip6tables -t nat -A POSTROUTING -o ${DEFAULT_IFACE} -j MASQUERADE || true
-PostUp = ip6tables -A FORWARD -i wg0 -j ACCEPT || true
-PostUp = ip6tables -A FORWARD -o wg0 -m state --state RELATED,ESTABLISHED -j ACCEPT || true
+PostUp = iptables -t nat -C POSTROUTING -o ${DEFAULT_IFACE} -j MASQUERADE 2>/dev/null || iptables -t nat -A POSTROUTING -o ${DEFAULT_IFACE} -j MASQUERADE
+PostUp = iptables -C FORWARD -i wg0 -d 10.0.0.0/8 -j DROP 2>/dev/null || iptables -A FORWARD -i wg0 -d 10.0.0.0/8 -j DROP
+PostUp = iptables -C FORWARD -i wg0 -d 172.16.0.0/12 -j DROP 2>/dev/null || iptables -A FORWARD -i wg0 -d 172.16.0.0/12 -j DROP
+PostUp = iptables -C FORWARD -i wg0 -d 192.168.0.0/16 -j DROP 2>/dev/null || iptables -A FORWARD -i wg0 -d 192.168.0.0/16 -j DROP
+PostUp = iptables -C FORWARD -i wg0 -j ACCEPT 2>/dev/null || iptables -A FORWARD -i wg0 -j ACCEPT
+PostUp = iptables -C FORWARD -o wg0 -m state --state RELATED,ESTABLISHED -j ACCEPT 2>/dev/null || iptables -A FORWARD -o wg0 -m state --state RELATED,ESTABLISHED -j ACCEPT
+PostUp = ip6tables -t nat -C POSTROUTING -o ${DEFAULT_IFACE} -j MASQUERADE 2>/dev/null || ip6tables -t nat -A POSTROUTING -o ${DEFAULT_IFACE} -j MASQUERADE || true
+PostUp = ip6tables -C FORWARD -i wg0 -d fc00::/7 -j DROP 2>/dev/null || ip6tables -A FORWARD -i wg0 -d fc00::/7 -j DROP || true
+PostUp = ip6tables -C FORWARD -i wg0 -j ACCEPT 2>/dev/null || ip6tables -A FORWARD -i wg0 -j ACCEPT || true
+PostUp = ip6tables -C FORWARD -o wg0 -m state --state RELATED,ESTABLISHED -j ACCEPT 2>/dev/null || ip6tables -A FORWARD -o wg0 -m state --state RELATED,ESTABLISHED -j ACCEPT || true
 PostDown = iptables -t nat -D POSTROUTING -o ${DEFAULT_IFACE} -j MASQUERADE
+PostDown = iptables -D FORWARD -i wg0 -d 10.0.0.0/8 -j DROP
+PostDown = iptables -D FORWARD -i wg0 -d 172.16.0.0/12 -j DROP
+PostDown = iptables -D FORWARD -i wg0 -d 192.168.0.0/16 -j DROP
 PostDown = iptables -D FORWARD -i wg0 -j ACCEPT
 PostDown = iptables -D FORWARD -o wg0 -m state --state RELATED,ESTABLISHED -j ACCEPT
 PostDown = ip6tables -t nat -D POSTROUTING -o ${DEFAULT_IFACE} -j MASQUERADE || true
+PostDown = ip6tables -D FORWARD -i wg0 -d fc00::/7 -j DROP || true
 PostDown = ip6tables -D FORWARD -i wg0 -j ACCEPT || true
 PostDown = ip6tables -D FORWARD -o wg0 -m state --state RELATED,ESTABLISHED -j ACCEPT || true
 EOF
@@ -102,6 +110,13 @@ else
         echo "[wg-init] WARNING: INTERNAL_SUBNET (${INTERNAL_SUBNET}) does not match the existing server address (${CURRENT_IP})"
         echo "[wg-init] WARNING: INTERNAL_SUBNET only takes effect on first run — the existing subnet is kept"
         echo "[wg-init] WARNING: to change the subnet, delete ./config/wg and ./config/peers, restart, and re-issue all peers"
+    fi
+
+    # Configs generated before LAN isolation existed still allow VPN
+    # clients into the home LAN — detect by the absence of the DROP rule.
+    if ! grep -q -- '-d 10\.0\.0\.0/8' "${WG_CONF}"; then
+        echo "[wg-init] WARNING: wg0.conf predates LAN isolation — VPN clients can reach the home LAN and each other"
+        echo "[wg-init] WARNING: see README 'Client isolation' for how to migrate the firewall block"
     fi
 fi
 
