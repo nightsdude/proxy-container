@@ -53,7 +53,7 @@ TZ=Europe/Warsaw
 |----------|-------------|
 | `SERVER_URL` | Your DuckDNS hostname (e.g., `myproxy.duckdns.org`) |
 | `SERVER_PORT` | WireGuard listen port (default: `51820`). Can be changed later — see [Changing settings after first run](#changing-settings-after-first-run) |
-| `INTERNAL_SUBNET` | VPN subnet (default: `10.13.13.0/24`). Change it only if this range could collide with a network your devices roam onto. **Takes effect on first run only** — see [Changing settings after first run](#changing-settings-after-first-run). The DNS resolver configures itself from it automatically. The IPv6 ULA prefix (`fd00::/64`) is fixed and not controlled by this variable |
+| `INTERNAL_SUBNET` | VPN subnet (default: `10.13.13.0/24`). **Must be a /24 in the form `x.x.x.0/24`** — the container refuses first start otherwise. Change it only if this range could collide with a network your devices roam onto. **Takes effect on first run only** — see [Changing settings after first run](#changing-settings-after-first-run). The DNS resolver configures itself from it automatically. The IPv6 ULA prefix (`fd00::/64`) is fixed and not controlled by this variable |
 | `DUCKDNS_TOKEN` | Your DuckDNS API token |
 | `DUCKDNS_SUBDOMAIN` | Your DuckDNS subdomain (without `.duckdns.org`) |
 | `TZ` | Timezone for the container (e.g., `Europe/Warsaw`) |
