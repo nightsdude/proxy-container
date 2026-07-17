@@ -178,7 +178,7 @@ This setup is designed so websites cannot distinguish your traffic from someone 
 - **No proxy headers** — WireGuard is a Layer 3 VPN, no application-level modification
 - **No DNS leaks** — all DNS resolves on the Pi via Unbound
 - **No WebRTC leaks** — full tunnel routes all protocols
-- **Standard MTU** (1420) — avoids packet size fingerprinting
+- **Standard MTU** (1280) — avoids packet size fingerprinting
 - **No IPv6 leaks** — client IPv6 traffic is routed into the tunnel (`::/0`) and deliberately dropped at the server by default, so it can never bypass the VPN; IPv6 DNS (`fd00::1`) still works. Working IPv6 egress is available as an opt-in — see [Enabling real IPv6 egress](#enabling-real-ipv6-egress-optional)
 - **LAN isolation** — VPN clients can only reach the internet: forwarded traffic from the tunnel to private ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `fc00::/7`) is dropped, so a lost or stolen peer config cannot be used to reach devices on your home network, and peers cannot see each other. DNS (served from inside the container) still works.
 

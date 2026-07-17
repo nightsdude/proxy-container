@@ -99,7 +99,7 @@ cat > "${PEER_DIR}/${PEER_NAME}.conf" <<EOF
 PrivateKey = ${PEER_PRIVATE_KEY}
 Address = ${PEER_IP}/32, ${PEER_IP6}/128
 DNS = ${SUBNET_BASE}.1, fd00::1
-MTU = 1420
+MTU = 1280
 
 [Peer]
 PublicKey = ${SERVER_PUBLIC_KEY}

@@ -65,7 +65,7 @@ if [ ! -f "${WG_CONF}" ]; then
 Address = ${SERVER_IP}/${SUBNET_MASK}, fd00::1/64
 ListenPort = ${SERVER_PORT}
 PrivateKey = ${SERVER_PRIVATE_KEY}
-MTU = 1420
+MTU = 1280
 PostUp = iptables -t nat -C POSTROUTING -o ${DEFAULT_IFACE} -j MASQUERADE 2>/dev/null || iptables -t nat -A POSTROUTING -o ${DEFAULT_IFACE} -j MASQUERADE
 PostUp = iptables -C FORWARD -i wg0 -d 10.0.0.0/8 -j DROP 2>/dev/null || iptables -A FORWARD -i wg0 -d 10.0.0.0/8 -j DROP
 PostUp = iptables -C FORWARD -i wg0 -d 172.16.0.0/12 -j DROP 2>/dev/null || iptables -A FORWARD -i wg0 -d 172.16.0.0/12 -j DROP
