@@ -216,7 +216,19 @@ To give clients working IPv6 through the tunnel, all of the following are requir
    If this shows nothing, stop here — leave IPv6 off. The default sinkhole is safer
    than half-working IPv6.
 
-2. **An IPv6-enabled Docker network.** Add to the bottom of `docker-compose.yml`:
+2. **Make Unbound resolve IPv6 DNS addresses.** Modify `rootfs/etc/unbound/unbound.conf.template` from:
+
+   ```yaml
+   do-ip6: no
+   ```
+   
+   to:
+
+   ```yaml
+   do-ip6: yes
+   ```
+
+3. **An IPv6-enabled Docker network.** Add to the bottom of `docker-compose.yml`:
 
    ```yaml
    networks:
@@ -230,7 +242,7 @@ To give clients working IPv6 through the tunnel, all of the following are requir
    needed: Docker auto-allocates a private (ULA) subnet, and its default ip6tables
    integration NATs the container's IPv6 traffic to the Pi's global address.
 
-3. **Verify:**
+4. **Verify:**
 
    ```bash
    docker exec wireguard ping -6 -c 1 2606:4700:4700::1111
